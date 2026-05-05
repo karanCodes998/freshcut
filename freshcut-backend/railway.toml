@@ -6,3 +6,6 @@ buildCommand = "./mvnw clean package -DskipTests"
 startCommand = "java -jar target/*.jar"
 healthcheckPath = "/api/auth/health"
 restartPolicyType = "always"
+
+[variables]
+RAILPACK_JDK_VERSION = "21"

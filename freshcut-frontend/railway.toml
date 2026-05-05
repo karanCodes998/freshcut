@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install --no-package-lock && npm run build"
+buildCommand = "rm -rf node_modules package-lock.json && npm cache clean --force && npm install --os=linux --cpu=x64 && npm run build"
 
 [deploy]
 startCommand = "npx serve -s dist -l 3000"

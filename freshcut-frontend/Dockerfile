@@ -9,6 +9,13 @@ RUN npm install
 
 # Copy source and build
 COPY . .
+
+# Inject Railway environment variables into the Vite build
+ARG VITE_API_URL
+ARG VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
 RUN npm run build
 
 # Runtime stage

@@ -1,0 +1,30 @@
+# ─── Backend ─────────────────────────────────────────────────────────────────
+freshcut-backend/target/
+freshcut-backend/.mvn/wrapper/maven-wrapper.jar
+freshcut-backend/*.log
+
+# ─── Frontend ────────────────────────────────────────────────────────────────
+freshcut-frontend/node_modules/
+freshcut-frontend/dist/
+freshcut-frontend/.env
+freshcut-frontend/.env.local
+freshcut-frontend/.env.production
+
+# ─── Secrets / Env ───────────────────────────────────────────────────────────
+*.env
+.env
+.env.*
+freshcut-backend/src/main/resources/application.properties
+
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.DS_Store
+Thumbs.db
+
+# ─── Misc scripts (local only) ───────────────────────────────────────────────
+fix_admin.js
+patch_db.js
+run_schema.js
+database_schema.sql

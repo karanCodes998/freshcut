@@ -40,6 +40,7 @@ export default function AdminDashboard() {
   const [userFilter, setUserFilter] = useState('ALL');
   const [toast, setToast]           = useState(null);
   const [processing, setProcessing] = useState({}); // tracks loading per item
+  const [expandedOrder, setExpandedOrder] = useState(null); // for history tab
 
   const showToast = (msg, type = 'success') => {
     setToast({ message: msg, type });
@@ -258,10 +259,35 @@ export default function AdminDashboard() {
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${STATUS_COLOR[order.status]}`}>{order.status}</span>
                         <span className="text-xs bg-green-50 text-green-600 font-bold px-2 py-0.5 rounded-full border border-green-100">COD</span>
                       </div>
-                      <div className="text-sm text-gray-500 mt-1.5 space-y-0.5">
-                        <div>👤 {order.contactName || order.customerName} · 📞 {order.contactPhone || order.customerPhone}</div>
-                        <div>🏪 {order.shopName}</div>
-                        <div className="text-xs text-gray-400">📍 {order.deliveryAddress}</div>
+                      <div className="text-sm text-gray-600 mt-2 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 text-center">👤</span>
+                          <span className="font-bold">{order.contactName || order.customerName}</span>
+                          <span className="text-gray-400">·</span>
+                          <a href={`tel:${order.contactPhone || order.customerPhone}`} className="text-blue-600 font-bold">{order.contactPhone || order.customerPhone}</a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 text-center">🏪</span>
+                          <span className="font-bold">{order.shopName}</span>
+                          <span className="text-gray-400">·</span>
+                          <span className="text-gray-500">{order.butcherName}</span>
+                          <span className="text-gray-400">·</span>
+                          <a href={`tel:${order.shopPhone}`} className="text-blue-600 font-bold">{order.shopPhone}</a>
+                        </div>
+                        {order.riderName && (
+                          <div className="bg-blue-50 text-blue-700 p-2.5 rounded-xl border border-blue-100 flex items-start gap-2 mt-1">
+                            <span className="text-base mt-0.5">🛵</span>
+                            <div className="text-[11px] leading-tight">
+                              <div className="font-black">RIDER ASSIGNED</div>
+                              <div className="mt-0.5 font-bold">{order.riderName} · <a href={`tel:${order.riderPhone}`} className="underline">{order.riderPhone}</a></div>
+                              <div className="mt-0.5 opacity-80">UPI: <span className="bg-blue-100 px-1 rounded">{order.riderUpiId || 'Not set'}</span></div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="text-[11px] text-gray-400 flex items-start gap-2 pt-1">
+                          <span className="w-5 text-center">📍</span>
+                          <span className="italic">{order.deliveryAddress}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -301,29 +327,72 @@ export default function AdminDashboard() {
               {allOrders.length === 0
                 ? <p className="text-center py-12 text-gray-400">No orders yet</p>
                 : allOrders.map(order => (
-                  <div key={order.id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-gray-600 text-sm w-10">#{order.id}</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${STATUS_COLOR[order.status]}`}>{order.status}</span>
-                      <div>
-                        <div className="font-semibold text-gray-800 text-sm">
-                          👤 {order.contactName || order.customerName} · 📞 <a href={`tel:${order.contactPhone || order.customerPhone}`} className="text-blue-600 hover:underline">{order.contactPhone || order.customerPhone}</a>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          🏪 {order.shopName} {order.shopPhone && <>· 📞 <a href={`tel:${order.shopPhone}`} className="text-blue-600 hover:underline">{order.shopPhone}</a></>} · {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                  <div key={order.id} className="border-b last:border-b-0">
+                    <div 
+                      onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                      className="px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono font-bold text-gray-600 text-sm w-10">#{order.id}</span>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${STATUS_COLOR[order.status]}`}>{order.status}</span>
+                        <div>
+                          <div className="font-bold text-gray-800 text-sm">{order.contactName || order.customerName}</div>
+                          <div className="text-[11px] text-gray-400">{order.shopName} · {new Date(order.createdAt).toLocaleDateString('en-IN')}</div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-4">
+                        <div className="font-black text-gray-800">₹{order.totalAmount}</div>
+                        <div className={`text-xs transition-transform ${expandedOrder === order.id ? 'rotate-180' : ''}`}>▼</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="font-black text-gray-800">₹{order.totalAmount}</div>
-                      <button 
-                        onClick={() => handleDeleteOrder(order.id)}
-                        disabled={processing['order_' + order.id] === 'deleting'}
-                        className="text-xs font-bold text-red-400 hover:text-red-600 bg-red-50 px-2 py-1 rounded transition-colors"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+
+                    {expandedOrder === order.id && (
+                      <div className="px-5 py-4 bg-gray-50 border-t border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up">
+                        {/* Customer */}
+                        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                          <div className="text-[10px] font-black text-gray-400 uppercase mb-2">👤 Customer Info</div>
+                          <div className="font-bold text-sm text-gray-800">{order.contactName || order.customerName}</div>
+                          <div className="text-blue-600 font-bold text-xs mt-1">📞 {order.contactPhone || order.customerPhone}</div>
+                          <div className="text-[10px] text-gray-500 mt-2 line-clamp-2 italic">📍 {order.deliveryAddress}</div>
+                        </div>
+
+                        {/* Butcher */}
+                        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                          <div className="text-[10px] font-black text-gray-400 uppercase mb-2">🏪 Butcher Info</div>
+                          <div className="font-bold text-sm text-gray-800">{order.shopName}</div>
+                          <div className="text-gray-500 text-xs mt-0.5">{order.butcherName}</div>
+                          <div className="text-blue-600 font-bold text-xs mt-1">📞 {order.shopPhone}</div>
+                        </div>
+
+                        {/* Rider */}
+                        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                          <div className="text-[10px] font-black text-gray-400 uppercase mb-2">🛵 Rider Info</div>
+                          {order.riderName ? (
+                            <>
+                              <div className="font-bold text-sm text-gray-800">{order.riderName}</div>
+                              <div className="text-blue-600 font-bold text-xs mt-1">📞 {order.riderPhone}</div>
+                              <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded mt-2 font-mono text-[10px] border border-blue-100 flex justify-between items-center">
+                                <span>UPI: {order.riderUpiId || 'Not Set'}</span>
+                                <button onClick={(e) => {e.stopPropagation(); navigator.clipboard.writeText(order.riderUpiId)}} className="hover:text-blue-900 text-[9px]">📋</button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-gray-400 italic mt-2">No rider assigned yet</div>
+                          )}
+                        </div>
+
+                        {/* Action Bar */}
+                        <div className="md:col-span-3 flex justify-end">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
+                            disabled={processing['order_' + order.id] === 'deleting'}
+                            className="text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 px-4 py-1.5 rounded-lg border border-red-100"
+                          >
+                            {processing['order_' + order.id] === 'deleting' ? '⏳ Deleting...' : '🗑️ Permanently Delete Order'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
             </div>

@@ -1,3 +1,7 @@
+# ─── Common ──────────────────────────────────────────────────────────────────
+node_modules/
+.DS_Store
+
 # ─── Backend ─────────────────────────────────────────────────────────────────
 freshcut-backend/target/
 freshcut-backend/.mvn/wrapper/maven-wrapper.jar

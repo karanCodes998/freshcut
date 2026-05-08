@@ -3,6 +3,8 @@ package com.freshcut.service;
 import com.freshcut.dto.AuthResponse;
 import com.freshcut.dto.LoginRequest;
 import com.freshcut.dto.RegisterRequest;
+import com.freshcut.dto.ForgotPasswordRequest;
+import com.freshcut.dto.ResetPasswordRequest;
 import com.freshcut.model.Role;
 import com.freshcut.model.User;
 import com.freshcut.repository.ButcherShopRepository;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    private final java.util.Map<String, String> otpStorage = new java.util.HashMap<>();
 
     private final UserRepository userRepository;
     private final ButcherShopRepository butcherShopRepository;
@@ -34,6 +37,7 @@ public class AuthService {
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .upiId(request.getUpiId())
                 .build();
         
         userRepository.save(user);
@@ -68,5 +72,36 @@ public class AuthService {
                 .name(user.getName())
                 .shopId(butcherShopRepository.findByUser(user).map(s -> s.getId()).orElse(null))
                 .build();
+    }
+
+    public String requestPasswordReset(ForgotPasswordRequest request) {
+        if (userRepository.findByPhone(request.getPhone()).isEmpty()) {
+            throw new RuntimeException("No account found with this phone number");
+        }
+        
+        // Generate a real 6-digit OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        otpStorage.put(request.getPhone(), otp);
+        
+        System.out.println("\n========================================");
+        System.out.println("🔑 PASSWORD RESET OTP FOR: " + request.getPhone());
+        System.out.println("👉 YOUR ACTUAL OTP IS: " + otp);
+        System.out.println("========================================\n");
+
+        return otp;
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByPhone(request.getPhone())
+                .orElseThrow(() -> new RuntimeException("No account found with this phone number"));
+
+        String storedOtp = otpStorage.get(request.getPhone());
+        if (storedOtp == null || !storedOtp.equals(request.getOtp())) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        otpStorage.remove(request.getPhone()); // Clear after use
     }
 }

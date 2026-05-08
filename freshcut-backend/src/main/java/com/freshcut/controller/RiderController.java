@@ -17,6 +17,19 @@ public class RiderController {
 
     private final RiderService riderService;
 
+    @GetMapping("/profile")
+    public ResponseEntity<java.util.Map<String, Object>> getProfile(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(riderService.getProfile(user));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<Void> updateProfile(
+            @AuthenticationPrincipal User user,
+            @RequestBody java.util.Map<String, String> data) {
+        riderService.updateProfile(user, data);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping("/status/online")
     public ResponseEntity<Void> goOnline(@AuthenticationPrincipal User user) {
         riderService.setStatus(user, true);

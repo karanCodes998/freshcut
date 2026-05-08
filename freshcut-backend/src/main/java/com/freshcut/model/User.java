@@ -45,6 +45,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @Column(name = "upi_id", length = 50)
+    private String upiId;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

@@ -31,5 +31,7 @@ public class OrderDTO {
     private LocalDateTime createdAt;
     private String riderName;
     private String riderPhone;
+    private String riderUpiId;
+    private String butcherName;
     private List<OrderItemDTO> items;
 }

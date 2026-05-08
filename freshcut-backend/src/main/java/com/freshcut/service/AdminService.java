@@ -144,6 +144,15 @@ public class AdminService {
         dto.setShopLng(order.getShop().getLongitude());
         dto.setStatus(order.getStatus());
         dto.setCreatedAt(order.getCreatedAt());
+        dto.setButcherName(order.getShop().getUser().getName());
+
+        deliveryRepository.findByOrder(order).ifPresent(d -> {
+            if (d.getRider() != null) {
+                dto.setRiderName(d.getRider().getName());
+                dto.setRiderPhone(d.getRider().getPhone());
+                dto.setRiderUpiId(d.getRider().getUpiId());
+            }
+        });
         
         List<OrderItemDTO> items = orderItemRepository.findByOrder(order).stream().map(item -> {
             OrderItemDTO itemDto = new OrderItemDTO();

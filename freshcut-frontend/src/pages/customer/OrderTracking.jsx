@@ -224,6 +224,52 @@ export default function OrderTracking() {
           </div>
         )}
 
+        {/* Payment QR (Shows when out for delivery or delivered) */}
+        {(order.status === 'PICKED_UP' || order.status === 'DELIVERED') && (
+          <div className="bg-white rounded-3xl shadow-xl shadow-green-100 border-2 border-green-50 p-6 mb-6 animate-bounce-in overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">💰</div>
+            <div className="text-center">
+              <div className={`inline-flex items-center justify-center w-16 h-16 ${order.status === 'DELIVERED' ? 'bg-green-500' : 'bg-orange-500'} text-white text-3xl rounded-2xl shadow-lg mb-4`}>
+                {order.status === 'DELIVERED' ? '✅' : '🛵'}
+              </div>
+              <h2 className="text-2xl font-black text-gray-900 mb-1">
+                {order.status === 'DELIVERED' ? 'Order Delivered!' : 'Rider is on the way!'}
+              </h2>
+              <p className="text-gray-500 text-sm mb-6">
+                {order.status === 'DELIVERED' 
+                  ? 'Thank you for choosing FreshCut. Please complete your payment.' 
+                  : 'Your rider is nearby. You can complete your payment now for a faster experience.'}
+              </p>
+              
+              <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100 mb-6 shadow-inner">
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Scan to Pay via UPI</div>
+                <div className="relative inline-block">
+                  <img 
+                    src="/src/assets/images/payment_qr.png" 
+                    alt="Payment QR" 
+                    className="w-56 h-auto mx-auto rounded-3xl shadow-xl border-8 border-white mb-4"
+                    onError={(e) => { e.target.src = 'https://placehold.co/400x400?text=Scan+to+Pay'; }}
+                  />
+                  <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-2 shadow-lg">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" alt="UPI" className="w-8 h-8" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">Payable Amount</div>
+                  <div className="text-3xl font-black text-green-600">₹{parseFloat(order.totalAmount || 0).toFixed(0)}</div>
+                  <div className="bg-white/50 border border-gray-200 px-3 py-1 rounded-full text-[10px] text-gray-500 mt-2 inline-flex items-center gap-1">
+                    UPI ID: <span className="font-bold text-gray-800">faiyazazima@oksbi</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-400 font-medium">
+                Once paid, your order is fully settled. <br/>Have a great meal! 🍖
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Progress tracker */}
         {!isCancelled && (
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">

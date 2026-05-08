@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-export const triggerNotification = (title, body) => {
+import { showSwiggyNotification } from '../components/GlobalNotifications';
+
+export const triggerNotification = (title, body, icon = '🔔') => {
+  // 1. In-app Swiggy Popup
+  showSwiggyNotification(title, body, icon);
+
+  // 2. Browser/OS Notification (if permission granted)
   if ('Notification' in window && Notification.permission === 'granted') {
     const notification = new Notification(title, { body });
     notification.onclick = () => {
@@ -10,10 +16,13 @@ export const triggerNotification = (title, body) => {
       notification.close();
     };
   }
+
+  // 3. Physical Vibration
   if (navigator.vibrate) {
-    // Stronger vibration pattern for high attention
-    navigator.vibrate([500, 150, 500, 150, 500, 150, 500]); 
+    navigator.vibrate([200, 100, 200]); 
   }
+
+  // 4. Sound Alert
   try { 
     const audio = new Audio('/alert.mp3');
     audio.play().catch(() => {});

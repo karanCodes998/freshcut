@@ -12,7 +12,7 @@ const ROLES = [
 ];
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', phone: '', password: '', role: 'CUSTOMER' });
+  const [form, setForm] = useState({ name: '', phone: '', password: '', role: 'CUSTOMER', upiId: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -96,6 +96,15 @@ export default function Register() {
                 className="w-full border-2 border-gray-100 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-orange-400 transition-colors bg-gray-50 focus:bg-white"
                 placeholder="Create a strong password" />
             </div>
+
+            {form.role === 'RIDER' && (
+              <div className="animate-slide-up">
+                <label className="block text-sm font-bold text-gray-700 mb-2">💸 UPI ID / Number <span className="text-gray-400 font-normal">(for payouts)</span></label>
+                <input type="text" required value={form.upiId} onChange={e => setForm({ ...form, upiId: e.target.value })}
+                  className="w-full border-2 border-blue-100 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-400 transition-colors bg-blue-50 focus:bg-white"
+                  placeholder="e.g. 9876543210@upi" />
+              </div>
+            )}
 
             <button type="submit" disabled={loading}
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-black py-4 rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-orange-200 disabled:opacity-50 text-base">

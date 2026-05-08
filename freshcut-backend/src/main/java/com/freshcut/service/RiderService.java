@@ -21,6 +21,22 @@ public class RiderService {
     private final DeliveryRepository deliveryRepository;
     private final OrderItemRepository orderItemRepository;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
+
+    public java.util.Map<String, Object> getProfile(User user) {
+        return java.util.Map.of(
+            "id", user.getId(),
+            "name", user.getName(),
+            "phone", user.getPhone(),
+            "upiId", user.getUpiId() != null ? user.getUpiId() : ""
+        );
+    }
+
+    public void updateProfile(User user, java.util.Map<String, String> data) {
+        if (data.containsKey("name")) user.setName(data.get("name"));
+        if (data.containsKey("upiId")) user.setUpiId(data.get("upiId"));
+        userRepository.save(user);
+    }
 
     public void setStatus(User user, boolean isOnline) {
         RiderStatus status = riderStatusRepository.findByRider(user)

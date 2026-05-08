@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { goOnline, goOffline, getAvailableOrders, getActiveDelivery, acceptOrder, pickupOrder, deliverOrder } from '../../api/rider';
+import { goOnline, goOffline, getAvailableOrders, getActiveDelivery, acceptOrder, pickupOrder, deliverOrder, getProfile, updateProfile } from '../../api/rider';
 import { useWebSocket, triggerNotification } from '../../hooks/useWebSocket';
 import { useJsApiLoader, GoogleMap, DirectionsRenderer, Marker } from '@react-google-maps/api';
 
@@ -13,6 +13,10 @@ export default function RiderDashboard() {
   const [alert, setAlert] = useState(null);
   const [earnings, setEarnings] = useState({ today: 0, total: 0, deliveries: 0 });
   const [directions, setDirections] = useState(null);
+  const [tab, setTab] = useState('deliveries');
+  const [profile, setProfile] = useState({ name: '', phone: '', upiId: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savedProfile, setSavedProfile] = useState(false);
   const { subscribe, connected } = useWebSocket();
 
   const { isLoaded } = useJsApiLoader({
@@ -36,6 +40,10 @@ export default function RiderDashboard() {
   useEffect(() => {
     if (isOnline) fetchOrders();
   }, [isOnline]);
+
+  useEffect(() => {
+    getProfile().then(res => setProfile(res.data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (connected && isOnline) {
@@ -104,6 +112,21 @@ export default function RiderDashboard() {
       setActiveDelivery(prevDelivery);
       setEarnings(prev => ({ ...prev, today: prev.today - fee, total: prev.total - fee, deliveries: prev.deliveries - 1 }));
       alert('Failed to deliver order');
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setSavedProfile(false);
+    try {
+      await updateProfile(profile);
+      setSavedProfile(true);
+      setTimeout(() => setSavedProfile(false), 3000);
+    } catch (err) {
+      alert('Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -207,7 +230,7 @@ export default function RiderDashboard() {
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 mt-5">
             {[
               { label: "Today's Earnings", value: `₹${earnings.today}`, emoji: "💰" },
               { label: "Total Earned", value: `₹${earnings.total}`, emoji: "📈" },
@@ -222,7 +245,51 @@ export default function RiderDashboard() {
         </div>
       </div>
 
+      <div className="bg-white shadow-sm sticky top-16 z-40">
+        <div className="max-w-2xl mx-auto px-4 flex gap-1 py-2">
+          {[
+            { key: 'deliveries', label: '🛵 Deliveries' },
+            { key: 'settings', label: '⚙️ Settings' },
+          ].map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t.key ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {tab === 'settings' && (
+          <div className="bg-white rounded-3xl shadow-sm p-8 border border-gray-100">
+            <h2 className="text-2xl font-black text-gray-800 mb-6">⚙️ Profile Settings</h2>
+            <form onSubmit={handleUpdateProfile} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Full Name</label>
+                <input required value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Phone Number</label>
+                <input disabled value={profile.phone} 
+                  className="w-full border-2 border-gray-100 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 text-sm cursor-not-allowed" />
+                <p className="text-[10px] text-gray-400 mt-1">Phone number cannot be changed.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">UPI ID / Number</label>
+                <input required value={profile.upiId} onChange={e => setProfile({ ...profile, upiId: e.target.value })}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-blue-400" placeholder="e.g. 9876543210@upi" />
+                <p className="text-[10px] text-gray-400 mt-1">Your weekly earnings will be transferred here.</p>
+              </div>
+              <button type="submit" disabled={savingProfile} className={`w-full text-white font-black py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 ${savedProfile ? 'bg-green-500 shadow-green-200' : 'bg-blue-600 shadow-blue-100 hover:bg-blue-700'}`}>
+                {savingProfile ? '⏳ Saving...' : savedProfile ? '✅ Saved Successfully' : '💾 Save Profile'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {tab === 'deliveries' && (
+          <>
         {/* Active Delivery */}
         {activeDelivery && (
           <div className="bg-white rounded-2xl shadow-md border-2 border-blue-200 p-5 mb-6">
@@ -365,6 +432,8 @@ export default function RiderDashboard() {
                 ))}
               </div>
             )}
+          </>
+        )}
           </>
         )}
       </div>

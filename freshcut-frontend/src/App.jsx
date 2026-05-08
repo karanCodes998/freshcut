@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalNotifications from './components/GlobalNotifications';
+import Help from './pages/Help';
 
 // Customer
 import ShopList from './pages/customer/ShopList';
@@ -39,6 +40,7 @@ function App() {
           <Route path="/" element={<RoleRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/help" element={<Help />} />
 
           {/* Customer */}
           <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'ADMIN']} />}>

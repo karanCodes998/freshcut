@@ -6,19 +6,23 @@ const navLinks = {
   CUSTOMER: [
     { to: '/customer', label: '🏠 Home' },
     { to: '/customer/orders', label: '📋 Orders' },
+    { to: '/help', label: '🆘 Help' },
   ],
   BUTCHER: [
     { to: '/butcher', label: '📊 Dashboard' },
     { to: '/butcher/menu', label: '🍖 Menu' },
     { to: '/butcher/shop', label: '🏪 My Shop' },
+    { to: '/help', label: '🆘 Help' },
   ],
   RIDER: [
     { to: '/rider', label: '🛵 Dashboard' },
+    { to: '/help', label: '🆘 Help' },
   ],
   ADMIN: [
     { to: '/admin', label: '📊 Overview' },
     { to: '/admin/shops', label: '🏪 Shops' },
     { to: '/admin/riders', label: '🛵 Riders' },
+    { to: '/help', label: '🆘 Help' },
   ],
 };
 
@@ -98,8 +102,16 @@ export default function Navbar() {
                   Logout
                 </button>
                 {/* Mobile menu button */}
-                <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-2 bg-white/20 rounded-lg">
-                  {menuOpen ? '✖' : '☰'}
+                <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-2 bg-white/20 rounded-lg flex items-center justify-center">
+                  {menuOpen ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
                 </button>
               </>
             ) : (

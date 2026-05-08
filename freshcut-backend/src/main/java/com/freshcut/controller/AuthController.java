@@ -3,6 +3,8 @@ package com.freshcut.controller;
 import com.freshcut.dto.AuthResponse;
 import com.freshcut.dto.LoginRequest;
 import com.freshcut.dto.RegisterRequest;
+import com.freshcut.dto.ForgotPasswordRequest;
+import com.freshcut.dto.ResetPasswordRequest;
 import com.freshcut.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +31,17 @@ public class AuthController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
+    }
+
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<java.util.Map<String, String>> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
+        String otp = authService.requestPasswordReset(request);
+        return ResponseEntity.ok(java.util.Map.of("otp", otp));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok().build();
     }
 }

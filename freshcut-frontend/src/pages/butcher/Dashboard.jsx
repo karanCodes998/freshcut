@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getShop, createShop, getItems, addItem, deleteItem, toggleAvailability, uploadImage, getOrders, acceptOrder, rejectOrder, prepareOrder, readyOrder, updateShop } from '../../api/butcher';
+import { getShop, createShop, getItems, addItem, updateItem, deleteItem, toggleAvailability, uploadImage, getOrders, acceptOrder, rejectOrder, prepareOrder, readyOrder, updateShop } from '../../api/butcher';
 import { useAuth } from '../../hooks/useAuth';
 import { useWebSocket, triggerNotification } from '../../hooks/useWebSocket';
 import { useJsApiLoader, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
@@ -16,6 +16,8 @@ export default function ButcherDashboard() {
   const [tab, setTab] = useState('orders');
   const [shopForm, setShopForm] = useState({ shopName: '', address: '', area: '', latitude: 19.0760, longitude: 72.8777 });
   const [newItem, setNewItem] = useState({ name: '', description: '', pricePerKg: '' });
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editItemForm, setEditItemForm] = useState({ name: '', description: '', pricePerKg: '' });
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -27,6 +29,7 @@ export default function ButcherDashboard() {
   const [uploadingId, setUploadingId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({});
   const [dragOverId, setDragOverId] = useState(null);
+  const [processingOrders, setProcessingOrders] = useState({});
 
   const fetchAll = async () => {
     try {
@@ -96,6 +99,16 @@ export default function ButcherDashboard() {
     } catch (err) { alert('Failed to add item'); }
   };
 
+  const handleUpdateItem = async (e) => {
+    e.preventDefault();
+    try {
+      await updateItem(editingItemId, { ...editItemForm, pricePerKg: parseFloat(editItemForm.pricePerKg) });
+      setEditingItemId(null);
+      const res = await getItems();
+      setItems(res.data);
+    } catch (err) { alert('Failed to update item'); }
+  };
+
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
@@ -157,7 +170,10 @@ export default function ButcherDashboard() {
   };
 
   const handleOrderAction = async (id, action) => {
-    // Optimistic Update
+    if (processingOrders[id]) return;
+
+    setProcessingOrders(prev => ({ ...prev, [id]: true }));
+    
     let newStatus = '';
     if (action === 'accept') newStatus = 'ACCEPTED';
     else if (action === 'reject') newStatus = 'CANCELLED';
@@ -165,6 +181,8 @@ export default function ButcherDashboard() {
     else if (action === 'ready') newStatus = 'READY';
 
     const previousOrders = [...orders];
+    
+    // 1. Optimistic Update
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
 
     try {
@@ -173,12 +191,27 @@ export default function ButcherDashboard() {
       else if (action === 'prepare') await prepareOrder(id);
       else if (action === 'ready') await readyOrder(id);
       
-      // Async fetch to sync up
-      getOrders().then(res => setOrders(res.data)).catch(() => {});
+      // 2. Final sync after a short delay to ensure DB consistency
+      setTimeout(async () => {
+        try {
+          const res = await getOrders();
+          setOrders(res.data);
+          setProcessingOrders(prev => {
+            const n = { ...prev };
+            delete n[id];
+            return n;
+          });
+        } catch (e) {}
+      }, 500);
+
     } catch (err) { 
-      // Revert if failed
-      alert('Action failed'); 
+      alert('Action failed: ' + (err.response?.data?.message || err.message)); 
       setOrders(previousOrders);
+      setProcessingOrders(prev => {
+        const n = { ...prev };
+        delete n[id];
+        return n;
+      });
     }
   };
 
@@ -382,32 +415,44 @@ export default function ButcherDashboard() {
                   ))}
                 </div>
 
-                <div className="flex gap-3">
-                  {order.status === 'PLACED' && (
-                    <>
-                      <button onClick={() => handleOrderAction(order.id, 'accept')}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black py-3 rounded-xl transition-all text-base shadow-lg shadow-green-200">
-                        ✅ Accept
+                  <div className="flex gap-3">
+                    {order.status === 'PLACED' && (
+                      <>
+                        <button 
+                          onClick={() => handleOrderAction(order.id, 'accept')}
+                          disabled={processingOrders[order.id]}
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black py-3 rounded-xl transition-all text-base shadow-lg shadow-green-200 disabled:opacity-50"
+                        >
+                          {processingOrders[order.id] ? '⌛...' : '✅ Accept'}
+                        </button>
+                        <button 
+                          onClick={() => handleOrderAction(order.id, 'reject')}
+                          disabled={processingOrders[order.id]}
+                          className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-3 rounded-xl transition-all text-base border-2 border-red-200 disabled:opacity-50"
+                        >
+                          ❌ Reject
+                        </button>
+                      </>
+                    )}
+                    {order.status === 'ACCEPTED' && (
+                      <button 
+                        onClick={() => handleOrderAction(order.id, 'prepare')}
+                        disabled={processingOrders[order.id]}
+                        className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
+                      >
+                        {processingOrders[order.id] ? '⌛ Starting...' : '🔪 Start Preparing'}
                       </button>
-                      <button onClick={() => handleOrderAction(order.id, 'reject')}
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-3 rounded-xl transition-all text-base border-2 border-red-200">
-                        ❌ Reject
+                    )}
+                    {order.status === 'PREPARING' && (
+                      <button 
+                        onClick={() => handleOrderAction(order.id, 'ready')}
+                        disabled={processingOrders[order.id]}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-200 disabled:opacity-50"
+                      >
+                        {processingOrders[order.id] ? '⌛ Marking Ready...' : '🟢 Mark as Ready for Pickup'}
                       </button>
-                    </>
-                  )}
-                  {order.status === 'ACCEPTED' && (
-                    <button onClick={() => handleOrderAction(order.id, 'prepare')}
-                      className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-indigo-200">
-                      🔪 Start Preparing
-                    </button>
-                  )}
-                  {order.status === 'PREPARING' && (
-                    <button onClick={() => handleOrderAction(order.id, 'ready')}
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-200">
-                      🟢 Mark as Ready for Pickup
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
               </div>
             ))}
           </div>
@@ -498,23 +543,49 @@ export default function ButcherDashboard() {
                         </label>
 
                         <div className="flex-1 min-w-0">
-                          <div className="font-bold text-gray-900 text-base">{item.name}</div>
-                          <div className="text-gray-500 text-sm mt-0.5 line-clamp-2">{item.description}</div>
-                          <div className="font-bold text-orange-600 mt-1">₹{item.pricePerKg}/kg</div>
-                          <div className="text-gray-400 text-xs mt-1">📷 Click image or drag & drop to upload photo</div>
+                          {editingItemId === item.id ? (
+                            <form onSubmit={handleUpdateItem} className="space-y-2 mt-1">
+                              <input required value={editItemForm.name} onChange={e => setEditItemForm({ ...editItemForm, name: e.target.value })}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Item Name" />
+                              <input value={editItemForm.description} onChange={e => setEditItemForm({ ...editItemForm, description: e.target.value })}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Description" />
+                              <div className="flex gap-2">
+                                <input required type="number" min="1" value={editItemForm.pricePerKg} onChange={e => setEditItemForm({ ...editItemForm, pricePerKg: e.target.value })}
+                                  className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Price/Kg" />
+                                <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-green-600 transition-all">Save</button>
+                                <button type="button" onClick={() => setEditingItemId(null)} className="bg-gray-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-bold hover:bg-gray-300 transition-all">Cancel</button>
+                              </div>
+                            </form>
+                          ) : (
+                            <>
+                              <div className="font-bold text-gray-900 text-base">{item.name}</div>
+                              <div className="text-gray-500 text-sm mt-0.5 line-clamp-2">{item.description}</div>
+                              <div className="font-bold text-orange-600 mt-1">₹{item.pricePerKg}/kg</div>
+                              <div className="text-gray-400 text-xs mt-1">📷 Click image or drag & drop to upload photo</div>
+                            </>
+                          )}
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
                           <button onClick={async () => { await toggleAvailability(item.id); const res = await getItems(); setItems(res.data); }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all w-full ${
                               item.isAvailable ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                             }`}>
                             {item.isAvailable ? '🟢 Available' : '⚫ Hidden'}
                           </button>
-                          <button onClick={async () => { await deleteItem(item.id); const res = await getItems(); setItems(res.data); }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border border-red-100">
-                            🗑️ Delete
-                          </button>
+                          <div className="flex gap-2 w-full justify-end">
+                            <button onClick={() => {
+                              setEditingItemId(item.id);
+                              setEditItemForm({ name: item.name, description: item.description, pricePerKg: item.pricePerKg });
+                            }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors border border-blue-100">
+                              ✏️ Edit
+                            </button>
+                            <button onClick={async () => { await deleteItem(item.id); const res = await getItems(); setItems(res.data); }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border border-red-100">
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
 

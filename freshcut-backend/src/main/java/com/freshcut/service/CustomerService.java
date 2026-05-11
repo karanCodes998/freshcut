@@ -1,5 +1,6 @@
 package com.freshcut.service;
 
+import com.freshcut.dto.AddressDTO;
 import com.freshcut.dto.MeatItemDTO;
 import com.freshcut.dto.OrderDTO;
 import com.freshcut.dto.OrderItemDTO;
@@ -26,23 +27,107 @@ public class CustomerService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final DeliveryRepository deliveryRepository;
+    private final AddressRepository addressRepository;
     private final NotificationService notificationService;
 
-    @Cacheable(value = "shops", key = "'active'")
-    public List<ShopDTO> getActiveShops() {
-        return shopRepository.findByIsActiveTrue().stream().map(shop -> {
-            ShopDTO dto = new ShopDTO();
-            dto.setId(shop.getId());
-            dto.setShopName(shop.getShopName());
-            dto.setAddress(shop.getAddress());
-            dto.setArea(shop.getArea());
-            dto.setIsActive(shop.getIsActive());
-            dto.setDeliveryFee(shop.getDeliveryFee());
-            dto.setDeliveryRadiusKm(shop.getDeliveryRadiusKm());
-            dto.setLatitude(shop.getLatitude());
-            dto.setLongitude(shop.getLongitude());
-            return dto;
-        }).collect(Collectors.toList());
+    @Cacheable(value = "shops", key = "#lat + '-' + #lng")
+    public List<ShopDTO> getActiveShops(Double lat, Double lng) {
+        List<ButcherShop> shops = shopRepository.findByIsActiveTrue();
+        
+        return shops.stream()
+                .map(shop -> {
+                    ShopDTO dto = new ShopDTO();
+                    dto.setId(shop.getId());
+                    dto.setShopName(shop.getShopName());
+                    dto.setAddress(shop.getAddress());
+                    dto.setArea(shop.getArea());
+                    dto.setIsActive(shop.getIsActive());
+                    dto.setDeliveryFee(shop.getDeliveryFee());
+                    dto.setDeliveryRadiusKm(shop.getDeliveryRadiusKm());
+                    dto.setLatitude(shop.getLatitude());
+                    dto.setLongitude(shop.getLongitude());
+                    
+                    if (lat != null && lng != null && shop.getLatitude() != null && shop.getLongitude() != null) {
+                        double distance = calculateDistance(lat, lng, shop.getLatitude(), shop.getLongitude());
+                        dto.setDistanceKm(distance);
+                    }
+                    return dto;
+                })
+                .filter(dto -> {
+                    // Filter by 20km radius if location is provided
+                    if (lat != null && lng != null && dto.getDistanceKm() != null) {
+                        return dto.getDistanceKm() <= 20.0;
+                    }
+                    return true;
+                })
+                .sorted((a, b) -> {
+                    if (a.getDistanceKm() != null && b.getDistanceKm() != null) {
+                        return a.getDistanceKm().compareTo(b.getDistanceKm());
+                    }
+                    return 0;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // Radius of the earth
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    public List<AddressDTO> getAddresses(User user) {
+        return addressRepository.findByUserOrderByIsDefaultDesc(user).stream()
+                .map(this::mapToAddressDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AddressDTO saveAddress(User user, AddressDTO dto) {
+        if (Boolean.TRUE.equals(dto.getIsDefault())) {
+            // Unset other defaults
+            List<Address> addresses = addressRepository.findByUser(user);
+            addresses.forEach(a -> a.setIsDefault(false));
+            addressRepository.saveAll(addresses);
+        }
+
+        Address address = Address.builder()
+                .user(user)
+                .name(dto.getName())
+                .addressLine(dto.getAddressLine())
+                .area(dto.getArea())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
+                .isDefault(dto.getIsDefault() != null ? dto.getIsDefault() : false)
+                .build();
+        
+        return mapToAddressDTO(addressRepository.save(address));
+    }
+
+    @Transactional
+    public void deleteAddress(User user, Long id) {
+        Address address = addressRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Address not found"));
+        if (!address.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+        addressRepository.delete(address);
+    }
+
+    private AddressDTO mapToAddressDTO(Address address) {
+        return AddressDTO.builder()
+                .id(address.getId())
+                .name(address.getName())
+                .addressLine(address.getAddressLine())
+                .area(address.getArea())
+                .latitude(address.getLatitude())
+                .longitude(address.getLongitude())
+                .isDefault(address.getIsDefault())
+                .build();
     }
 
     @Cacheable(value = "menus", key = "#shopId")

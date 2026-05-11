@@ -49,9 +49,9 @@ export default function Checkout() {
 
   const subtotal = cartItems.reduce((s, { item, grams }) => s + (parseFloat(item.pricePerKg || 0) * parseInt(grams || 0)) / 1000, 0) || 0;
   
-  // Dynamic Delivery Fee: 20 (base) + 6 per km
+  // Dynamic Delivery Fee: 10 (base) + 6 per km
   const deliveryFeeValue = distanceInfo.distance > 0 
-    ? 20 + (distanceInfo.distance * 6)
+    ? 10 + (distanceInfo.distance * 6)
     : parseFloat(deliveryFee || 40) || 40;
     
   const serviceFeeValue = 9;

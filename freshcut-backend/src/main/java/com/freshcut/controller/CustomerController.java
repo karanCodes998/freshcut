@@ -1,5 +1,6 @@
 package com.freshcut.controller;
 
+import com.freshcut.dto.AddressDTO;
 import com.freshcut.dto.MeatItemDTO;
 import com.freshcut.dto.OrderDTO;
 import com.freshcut.dto.ShopDTO;
@@ -20,8 +21,30 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping("/shops")
-    public ResponseEntity<List<ShopDTO>> getShops() {
-        return ResponseEntity.ok(customerService.getActiveShops());
+    public ResponseEntity<List<ShopDTO>> getShops(
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        return ResponseEntity.ok(customerService.getActiveShops(lat, lng));
+    }
+
+    @GetMapping("/addresses")
+    public ResponseEntity<List<AddressDTO>> getAddresses(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(customerService.getAddresses(user));
+    }
+
+    @PostMapping("/addresses")
+    public ResponseEntity<AddressDTO> saveAddress(
+            @AuthenticationPrincipal User user,
+            @RequestBody AddressDTO addressDTO) {
+        return ResponseEntity.ok(customerService.saveAddress(user, addressDTO));
+    }
+
+    @DeleteMapping("/addresses/{id}")
+    public ResponseEntity<Void> deleteAddress(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        customerService.deleteAddress(user, id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/shops/{id}/menu")

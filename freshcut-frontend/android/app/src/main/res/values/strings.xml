@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FreshCut</string>
+    <string name="title_activity_main">FreshCut</string>
+    <string name="package_name">com.freshcut.app</string>
+    <string name="custom_url_scheme">com.freshcut.app</string>
+</resources>

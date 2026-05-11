@@ -14,4 +14,5 @@ public class ShopDTO {
     private Integer deliveryRadiusKm;
     private Double latitude;
     private Double longitude;
+    private Double distanceKm;
 }

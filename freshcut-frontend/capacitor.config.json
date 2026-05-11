@@ -1,0 +1,15 @@
+{
+  "appId": "com.freshcut.app",
+  "appName": "FreshCut",
+  "webDir": "dist",
+  "server": {
+    "url": "https://freshcut-dusky.vercel.app",
+    "allowNavigation": ["freshcut-dusky.vercel.app"]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#f8f8f8"
+  }
+}
+
+
